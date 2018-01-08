@@ -6,10 +6,12 @@ In this build, the power drive to the heater is automatically controlled by the 
 
 To make life simpler my project uses the Arduino nano with an extension I/O board. So all the components CAN BE attached with pre-made connectors. There is NO circuit board making. There is NO soldering onto circuit boards. The ONLY soldering is for the plugs and sockets to connect it to the outside world. It is also inexpensive.
 
-For details on the build read the Dew_heater_detailos PDF.
+For details on the build read the Dew_heater_details PDF. This has instructions on the build, tesing etc.
 
-There are 4x Arduino files:
--	3x test files to check the DHT22 sensor, DS18B20 sensor and then both together. These assume the display is working.
--	The DewHeaterControlledVx-x file contains the working code for the complete system.
+Briefly, there are 5x Arduino files:
+- 4x test .ino files to check the DHT22 sensor, DS18B20 sensor and then both together. These use the serial monitor to display sensor status. The other test file checks that the OLED display works.
+- The DewHeaterControllerVx-xOLEDdisplay.ino file contains the working code for the complete system using an 128x64 OLED display.
 
 You can use commercially available dew straps (although I haven’t tested my system with these, so no responsibility taken), or you can make your own with nichrome wire. I have included instructions for this. I power it all from a standard 12V battery used for telescopes.
+
+Cheers, Chris
