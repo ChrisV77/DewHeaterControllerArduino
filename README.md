@@ -1,17 +1,14 @@
 # TelescopeDewHeaterController
-This is a relatively easy to build for an Arduino based automatic dew heater controller for telescopes. It heats the lens/mirror on your telescope to stop the dreaded dew. The build is based on the excellent Dew Heater controller built in IceInSpace 2010 by Bob Stephens at
-http://www.iceinspace.com.au/63-597-0-0-1-0.html
+This is a relatively easy to build for an Arduino based automatic dew heater controller for telescopes. It heats the lens/mirror on your telescope to stop the dreaded dew. 
 
-In this build, the power drive to the heater is automatically controlled by the difference between the ambient dew point and the current temperature of the heater on your lens/mirror. The heater power can also be set manually if desired. It also uses a 128x64 OLED display to show all the data. It would be simple to convert this to a more basic 20x2 or 20x4 LCD display (I will do this eventually).
+In this build, the power drive to the heater is automatically controlled by the difference between the ambient dew point and the current temperature of the heater on your lens/mirror. The heater power can also be set manually if desired. 
 
-To make life simpler my project uses the Arduino nano with an extension I/O board. So all the components CAN BE attached with pre-made connectors. There is NO circuit board making. There is NO soldering onto circuit boards. The ONLY soldering is for the plugs and sockets to connect it to the outside world. It is also inexpensive.
+The display can be a 16x2 LCD, or a 128x64 OLED.
+The ambient temperature/humidity sensor can be an AM2320 or a DHT22 (and soon a BME280)
+The heater temperture is sensed by a DS18B20
+
+Any arduino can be used, but I use the Nano with an extension I/O board. So all the components can be attached with pre-made connectors. There is NO circuit board making. Just a few resistors oldered here and there
 
 For details on the build read the Dew_heater_details PDF. This has instructions on the build, tesing etc.
 
-Briefly, there are 5x Arduino files:
-- 4x test .ino files to check the DHT22 sensor, DS18B20 sensor and then both together. These use the serial monitor to display sensor status. The other test file checks that the OLED display works.
-- The DewHeaterControllerVx-xOLEDdisplay.ino file contains the working code for the complete system using an 128x64 OLED display.
-
 You can use commercially available dew straps (although I haven’t tested my system with these, so no responsibility taken), or you can make your own with nichrome wire. I have included instructions for this. I power it all from a standard 12V battery used for telescopes.
-
-Cheers, Chris
