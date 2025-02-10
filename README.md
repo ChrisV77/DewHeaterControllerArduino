@@ -1,4 +1,4 @@
-# TelescopeDewHeaterController
+# Arduino Dew Heater Controller
 This is a relatively easy to build for an Arduino based automatic dew heater controller for telescopes. It AUTOMATICALLY heats the lens/mirror on your telescope to stop the dreaded dew.
 
 In this build, the power drive to the heater is automatically controlled by 
