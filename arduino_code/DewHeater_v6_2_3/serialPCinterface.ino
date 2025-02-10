@@ -66,19 +66,19 @@ void sendNumChansToPC() {
 
 void sendAmbientDataToPC() {
   // send ambient data. NB: x10 all temperatures to get an integer in the command from temp to one decomal place
-  sendArduinoCMDToPC( 1, (temperatureAmbient * 10));        // at - ambient temp
-  sendArduinoCMDToPC( 2, humidityAmbient);                  // ah - ambient humidity
-  sendArduinoCMDToPC( 3, (dewPointAmbient * 10));           // ad - ambient dew point
+  sendArduinoCMDToPC( 1, (ambientTemperature * 10));        // at - ambient temp
+  sendArduinoCMDToPC( 2, ambientHumidity);                  // ah - ambient humidity
+  sendArduinoCMDToPC( 3, (ambientDewpoint * 10));           // ad - ambient dew point
 }
 
 void sendModeDataToPC() {
   // send the global mode params
-  sendArduinoCMDToPC( 4, globalMode );                      // md - set channel mode  
-  sendArduinoCMDToPC( 5, manualPower );                     // mn - set manual power
-  sendArduinoCMDToPC( 6, (autoHeaterTargetTemp *10));       // mt - target temp (auto-heater mode)
-  sendArduinoCMDToPC( 7, autoAmbientMaxPower);              // mx - max power (auto-ambient mode)
-  sendArduinoCMDToPC( 9, (autoAmbientThreshold*10));        // mh - threshold (auto-ambient mode)
-  sendArduinoCMDToPC( 8, (tempCutOff*10));                  // mc - temperature cut-off
+  sendArduinoCMDToPC( 4, globalMode );                  // md - set channel mode  
+  sendArduinoCMDToPC( 5, manualPower );                 // mn - set manual power
+  sendArduinoCMDToPC( 6, (aHtrTargetTemp *10));         // mt - target temp (auto-heater mode)
+  sendArduinoCMDToPC( 7, aAmbMaxPwr);                   // mx - max power (auto-ambient mode)
+  sendArduinoCMDToPC( 9, (aAmbThresh*10));              // mh - threshold (auto-ambient mode)
+  sendArduinoCMDToPC( 8, (tempCutOff*10));              // mc - temperature cut-off
 }
 
 void sendChannelDataToPC(int theChan) {
@@ -124,23 +124,23 @@ void doCMDReceived() {
       break;
 
     case 6:    // "mt": set temp target (relative to dew point)
-      autoHeaterTargetTemp = inCMDval/10;               // divide by as as all temperature comms are integers
+      aHtrTargetTemp = inCMDval/10;             // divide by as as all temperature comms are integers
       break;
 
     case 7:    // "mx": set max power (for auto-ambient mode)
-      autoAmbientMaxPower = inCMDval;
+      aAmbMaxPwr = inCMDval;
       break;
 
     case 8:    // "mc": temp cut-off (for auto-heater mode)
-      tempCutOff = inCMDval/10;                         // divide by as as all temperature comms are integers
+      tempCutOff = inCMDval/10;                 // divide by as as all temperature comms are integers
       break;
 
     case 9:    // "mh": threshold (for auto-ambient mode)
-      autoAmbientThreshold = inCMDval/10;               // divide by as as all temperature comms are integers
+      aAmbThresh = inCMDval/10;                 // divide by as as all temperature comms are integers
       break;
 
     case 10:    // "ms": save data to EEPROM
-      saveEEPROMparams();                               // a param changed- so save all params to EEPROM
+      saveEEPROMparams();                       // a param changed- so save all params to EEPROM
       break;
   }
 }

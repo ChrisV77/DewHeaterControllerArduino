@@ -17,7 +17,7 @@ void getDS18B20data() {
   // first - setup and read the sensors
   for (theChan=0; theChan < numChannels; theChan++) {
     // zero the PWM output to heaters while talking to DS18B20s. Do this as PWM can cause interference (DS18B20 & heater wires close)
-    if (blankHeaterDuringRead) outputToHeater(theChan, 0);
+    if (blankHeaterDuringRead) setHeaterOutput(theChan, 0);
   
     // restart the library if last pass of DS18B20 had a read error
     if (errorDS18B20[theChan]) {
@@ -33,7 +33,7 @@ void getDS18B20data() {
     tempHeater[theChan] = sensor[theChan].getTempCByIndex(0);   // get temperature in celsius
 
     // if using blank heater, turn the PWMs back on  finished reading DS18B20
-    if (blankHeaterDuringRead) outputToHeater(theChan, outputPower[theChan]);
+    if (blankHeaterDuringRead) setHeaterOutput(theChan, outputPower[theChan]);
 
     // save error status
     errorDS18B20[theChan] = false;            // no read error

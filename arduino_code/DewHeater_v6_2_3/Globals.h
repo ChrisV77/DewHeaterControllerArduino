@@ -10,36 +10,58 @@
 const int   numChannels = 2;
 
 // AMBIENT TEMP/HUMIDITY SENSOR: AM2320 or BME280
-// options: AM2320_ON, BME280_ON (not sure if working yet)
+// options: AM2320_ON, BME280_ON. NB: I2C pins on Nano: SDA = A4, SCL = A5
 #define AM2320_ON
 
-// MODE CONTROL: either - PC_CONTROL: remote via PC (DewHeaterController = DewHeaterPCinterface_v2). Or 
-//                      - MODEBUTTON: LOCAL with button
-// options: PC_CONTROL, MODEBUTTON, (use default PC_CONTROL if no MODEBUTTON, as no PC comms if no connection from PC to arduino until established)
+// MODE CONTROL: either
+//  - PC_CONTROL: remote via PC (Controller = DewHeaterPCinterface.exe) 
+//    - can also define a DISPLAY TYPE line 28, but can't have mode button
+//  - MODEBUTTON: LOCAL with button 
+//    - MUST define a DISPLAY TYPE line 28
+// options: PC_CONTROL, MODEBUTTON
 #define PC_CONTROL
+                                        
 
-// OPTIONAL. DISPLAYS: OLED (OLED1306=SSD1306 display), LCD (LCD1602=16*2 LCD1604=16*4 LCD2004=20*4). LCD not working yet in current version
-// options: OLED1306, LCD1602, LCD1604, LCD2004, OR DISPLAY_OFF. Need one if using MODEBUTTON control. NB:OLED using ssd1306ascii driver
+// OPTIONAL. DISPLAYS: OLED (OLED1306=SSD1306 display; using ssd1306ascii driver), LCD (LCD1602=16*2 LCD1604=16*4 LCD2004=20*4).
+// options: OLED1306, LCD1602, DISPLAY_OFF (most common). LCD1604, LCD2004, OR DISPLAY_OFF are other options
+// - see comments lines 16-21
 #define DISPLAY_OFF
 
-// SOME OTHER OPTIONAL STUFF ** can be set in PC app; * stored in eeprom
-int         autoAmbientThreshold = 5;           // **,* threshold to turn on heater for auto-ambient mode (diff between ambient temp and dew point)
-int         tempCutOff = 32;                    // **,*  heater cut-off if too hot (& can be set in PC app (extras). Only works if have a DS18B20 temp sensor on heater
-int         autoHeaterTargetTemp = 5;           // ** Only for Auto-heater mode: target temperature above dew point (& can be set in PC app)
+// some more params than can be altered
 const bool  blankHeaterDuringRead = true;       // options: true, false: blank heater during heater temperature read
-                                                // - Use if getting strange values. Heater PWM output can interfere with DS18B20 on I2C if wires are long and close
-const bool  dewPointComplexCalc = true;         // complex (true) or simple (false) dew point calculation
-const bool  outputFlashMode = true;             // flash mode number on output (good if have LEDs there). options: true/false
-int         manualPower = 10;                   // ** power level if in Manual mode OR Auto & no sensor connected: 0-100%
-int         autoAmbientMaxPower = 30;           // ** max power level if in auto-ambient mode: 0-100%
+                                                // - Use it if getting strange values. Heater PWM output can interfere with DS18B20 readings if wires are long and close to each other
+const bool  dewPointComplexCalc = true;         // options: complex (true) or simple (false) dew point calculation. Default = true (doesn't really add much processing time)
+const bool  outputFlashMode = true;             // options: true/false (use if have LEDs across heater output). Will flash
+                                                // - On startup: number of channels
+                                                // - End of each cycle: heater mode (1,2,3,4 = off, manual, auto-ambient, autoheater), then at the heater power level
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------
+// Basic heaterParams. These can be varied but take care
+// These are stored in EEPROM to retrieve setting at last power cycle.
+// First, constants = their min, max, default, increment (for setting values with ardunio button control). See their descriptions in variables below
+const int globalModeRange[4]      = {0,3,1,1};       // default 1=manual
+const int manualPowerRange[4]     = {0,100,10,10};   // default 10%
+const int aAmbMaxPwrRange[4]      = {0,100,40,10};   // default 30%
+const int aAmbThreshRange[4]      = {0,12,6,1};      // default 6C
+const int aHtrTargetTempRange[4]  = {0,10,3,1};      // default 3C
+const int tempCutOffRange[4]      = {22,36,32,2};    // default 32C
+
+// variable for use during running. I have set to the default values. But these will chnage with EEPROM read at startup
+int   globalMode = globalModeRange[3];          // the global mode. Individual heater channels can default to other modes if heater temp & ambient read errors OR if above cutoff temp (only if heater connected)
+                                                // modes: off (0,1), manual (1,2), auto-ambient (2,3), auto-heater (3,4). Values in brackets are those used for (code, display)
+int   manualPower = manualPowerRange[3];        // manual power level: manual power between 0 - 100%
+int   aAmbMaxPwr = aAmbMaxPwrRange[3];          // Auto-Ambient mode: max power level
+int   aAmbThresh = aAmbThreshRange[3];          // Auto-Ambient mode: threshold below ambient temp to turn on heater (not feedback control)
+int   aHtrTargetTemp = aHtrTargetTempRange[3];  // Auto-heater mode: target heater temperature above ambient (uses feedback control)
+int   tempCutOff = tempCutOffRange[3];          // heater cut-off if too hot. Only works if have a DS18B20 temp sensor on heater
+
+String      msgEEPROM;                          // message on opening EEPROM read - error check on values (check if in range of sensible values, see lines 34-39)
 
 // THAT'S ALL
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-#define  DH_start   "DewHeater v"
-#define  DH_modes   "Modes: Man-Auto "
-#define  DH_control "Cntrl: PC-Btn   "
-#define  DH_display "Disp:  OLED-LCD "
+#define  DH_start   "DewHeater v"               // these are only used if an LCD/OLED display is being used
+#define  DH_modes   "Modes: Man&Auto"
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
 // DIGITAL PINS & SENSORS
@@ -62,10 +84,10 @@ int         autoAmbientMaxPower = 30;           // ** max power level if in auto
 #endif
 
 // and variables for ambient sensor
-float     temperatureAmbient;           // things to read
-float     humidityAmbient;
-float     dewPointAmbient;
-float     pressureAmbient;
+float     ambientTemperature;           // things to read
+float     ambientHumidity;
+float     ambientDewpoint;
+float     ambientPressure;
 bool      errorAmbientSensor;           // error, eg if not connected
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -73,20 +95,32 @@ bool      errorAmbientSensor;           // error, eg if not connected
 // NB: if using this you'll need to run this and the ambint sensor on the I2C
 // - LCD 16*2 or 16*4 20*4
 
+// definitions for mode control
+#ifdef MODEBUTTON
+  #define  DH_control "Cntrl: Button   "
+#endif
+#ifdef PC_CONTROL
+  #define  DH_control "Cntrl: PC       "
+#endif
+
+// definitions for LCD displays
 #ifdef LCD1602
   #define LCD_ON
-  #define numberCol 16
-  #define numberRow 2
+  #define numberCols 16
+  #define numberRows 2
+  #define  DH_display "Disp: LCD1602   "
 #endif
 #ifdef LCD1604
   #define LCD_ON
-  #define numberCol 16
-  #define numberRow 4
+  #define numberCols 16
+  #define numberRows 4
+  #define  DH_display "Disp: LCD1604  "
 #endif
 #ifdef LCD2004
   #define LCD_ON
-  #define numberCol 20
-  #define numberRow 4
+  #define numberCols 20
+  #define numberRows 4
+  #define  DH_display "Disp: LCD2004  "
 #endif
 
 #ifdef LCD_ON
@@ -103,22 +137,24 @@ bool      errorAmbientSensor;           // error, eg if not connected
   #ifdef LCD2004
     hd44780_I2Cexp lcd(0x3F);
   #endif
-  #define uCol 1                              // 1 per column/character
-  #define uRow 1                              // 1 per row/character
+  #define uCol 1                              // 1 units per column/character
+  #define uRow 1                              // 1 units per row/character
 #endif
 
-// - OLED 128*32 (SSD1306). Haven't sorted out SH1106
-
+// - definitions OLED 128*32 (SSD1306). Haven't sorted out SH1106
 #ifdef OLED1306
   // OLED SSD1306 0.9"/1.3" display 128x32 displays usually on I2C 0x3C (sometimes 0x3D)
   // simpler library, uses much less memory
   #define DISPLAY_ON
+  #define  DH_display "Disp:  OLED1306 "
   #include "SSD1306Ascii.h"
   #include "SSD1306AsciiAvrI2c.h"
   #define display_address 0x3c
   SSD1306AsciiAvrI2c display;
-  #define uCol 6                   // 8 units per column character (pixels)
-  #define uRow 1                   // 1 unit per row character
+  #define uCol 6                   // 6 units per column/character (pixels)
+  #define uRow 1                   // 1 unit per row/character
+  #define numberCols 20
+  #define numberRows 4
 #endif
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -137,8 +173,10 @@ DallasTemperature sensor[numChannels];      //  there are numChannels heater sen
 // DS18B20 variables
 double      tempHeater[numChannels];        // DS18B20 sensor temperatures from sensors1/2.
 boolean     errorDS18B20[numChannels];      // error if tempSensor == -90 or -127C (DEVICE_DISCONNECTED_C)
-const int   resDS18B20 = 11;                // resolution of DS18B20 read. I think 9/10/11/12 = 0.5/0.25/0.125/0.0625 degC
-                                            // I have been using 10 or 11 (11 a bit OTT but so what)
+const int   resDS18B20 = 11;                // DS18B20 read value   = 9     10    11    12. I use 11 as nice resolution & delay not too much
+                                            // resolution (C)       = 0.5   0.25  0.125 0.0625
+                                            // read delay (ms)      = 93    187   375   750
+
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
 // digital PIN for MODE CONTROL: only if local MODEBUTTON control
 #ifdef MODEBUTTON
@@ -163,16 +201,38 @@ PID PID_control[] = {
 };
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
-// global variables mode
-int         globalMode;                   // the SET mode at each heater:
-                                          //                    0=Off 1=Manual 2=Auto-Amb 3=Auto-HeatSensor 4=Auto-HeaterSensorPID
-                                          // for LED flashing:  1=Off 2=Manual 3=Auto-Amb 4=Auto-HeatSensor 5=Auto-HeaterSensorPID
-const int   numberModes = 4;
-#ifdef OLED1306
-const char  *heaterModeString[numberModes] = { "Off", "Manual", "AutoAmb", "AutoHtr"};
-#endif
-#ifdef LCD_ON                             // shorter chars for LCD display
-const char  *heaterModeString[numberModes] = { "Off", "Man", "A-Amb", "A-Htr"};
+// Variables int & char arrays: heaterMode, heaterParams (always). Also used as menus: mainMenu
+
+// heaterModes - is also level2 mode menu: ID = 1
+const char *heaterModes [] = {
+  "Off  ", 
+  "Man  ", 
+  "A-Amb", 
+  "A-Htr"
+};
+const int numHeaterModes = 4;
+
+// heaterParams - is also for level2 param menu: ID = 2
+const char *heaterParams [] = {
+  "Man-Pwr     ", 
+  "A-Htr-Thresh", 
+  "TempCutOff  ", 
+  "A-Amb-MaxPwr", 
+  "A-Amb-Thresh"
+};
+const int numHeaterParams = 5;
+
+// --------------------------------------------------------------------------- 
+// functions if display used
+
+#ifdef MODEBUTTON
+  // char array for level1 main menu: ID = 0
+  const char *menuMain[] = {
+    "Change Mode   ", 
+    "Change Params ", 
+    "Display Params"
+  };
+  const int numMenuMain = 3;
 #endif
 
 // channel cycle variables
@@ -210,7 +270,7 @@ const int   errorValue = -127;                   // value to send in error readi
 // timing stuff
 bool        ambientChecked;                     // ambient sensor checked & read. This is the start of each cycle in the main loop (after checking PC)
 bool        channelSet[numChannels];            // heater channel set & sent to PC
-const int   displayDelay = 500;                 // delays between displaying items
+const int   displayDelay = 500;                 // delays between displaying items 0.5s
 const unsigned long   cycleDuration = 20000;    // 20 sec delay between cycles
                                                 // A cycle = 1 PC check, 2 ambient sensor, 3 heater channels set
 const int   comDelay = 50;                      // delay for PC coms - had 200ms, trying shorter - 150, 100, 50 OK
@@ -219,22 +279,22 @@ const int   btnDelay = 25;                      // delay for button press
 unsigned long         currentMillis;            // current time in millisecs
 unsigned long         lastAmbientCheck;         // time of last ambient sensor check
 
-// some compile error messages
+// some compile error messages, just cause I really goof things up somethimes
 #ifdef BME280_ON
-#ifdef AM2320_ON
-#error "Can't define both AM2320 & BME280 ambient sensors. Change the unused one to xxxxxx_OFF"
-#endif
-#endif
-
-#ifdef MODEBUTTON
-#ifdef PC_CONTROL
-#error "Can't have PC_CONTROL && MODEBUTTON"
-#endif
+  #ifdef AM2320_ON
+    #error "Can't define both AM2320 & BME280 ambient sensors. Change the unused one to xxxxxx_OFF"
+  #endif
 #endif
 
 #ifdef MODEBUTTON
-#ifndef DISPLAY_ON
-#error "If using MODEBUTTON, must have a display define"
+  #ifdef PC_CONTROL
+    #error "Can't have PC_CONTROL && MODEBUTTON"
+  #endif
 #endif
+
+#ifdef MODEBUTTON
+  #ifndef DISPLAY_ON
+    #error "If using MODEBUTTON, must have a display defined"
+  #endif
 #endif
 

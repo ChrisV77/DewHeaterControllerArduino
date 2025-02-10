@@ -6,9 +6,18 @@ void resetAmbientSensor() {
 }
 
 void getAmbientData() {
-  // read ambient temp and humidity - takes 100s of msec?.
-  humidityAmbient = am2320.readHumidity();
-  temperatureAmbient = am2320.readTemperature();
+/*
+  // use the (1) standard or (2) modified adafruit am2320 sensor library. Will later look at Tilaart library
+
+  // (1) standard adafruit library. NB: this doesn't handle read errors, so dealt with in calDewPoint()
+  ambientHumidity = am2320.readHumidity();
+  ambientTemperature = am2320.readTemperature();
+*/
+  // (2) modified adafruit library: use if having AM2320 read problems. NB: have to modify installed adarfruit AM2320 library (see instructions)
+  if (am2320.readTemperatureAndHumidity(&ambientTemperature, &ambientHumidity)) errorAmbientSensor = false;
+  else   errorAmbientSensor = true;
+
+  // then calculate dew point, this has error handling
   calcDewPoint();
 }
 #endif
@@ -22,20 +31,24 @@ void resetAmbientSensor() {
 void getAmbientData() {
   bool bmeStatus;
 
+  errorAmbientSensor = true;
   // read ambient temp and humidity - takes 100s of msec?.
   bmeStatus = bme.begin();
   BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);    // units for read
   BME280::PresUnit presUnit(BME280::PresUnit_Pa);
   delay(comDelay);      // short delay for read - not sure if needed
-  if (!bmeStatus) {
+  if (bmeStatus) {
+    // sensor read OK
+    errorAmbientSensor = false;
+    bme.read(ambientPressure, ambientTemperature, ambientHumidity, tempUnit, pressUnit);
+  }
+  else {
     // error reading sensor
     errorAmbientSensor = true;
   }
-  else {
-    // sensor read OK
-    bme.read(pressureAmbient, temperatureAmbient, humidityAmbient, tempUnit, presUnit);
-    calcDewPoint();
-  }
+
+  // then calculate dew point, this has error handling
+  calcDewPoint();
 }
 #endif
 
@@ -43,22 +56,20 @@ void getAmbientData() {
 void calcDewPoint() {
   float logEx;
 
-  if (isnan(temperatureAmbient) || isnan(humidityAmbient)) {
-    errorAmbientSensor = true;
-    humidityAmbient = errorValue;     // set both to read error value
-    temperatureAmbient = errorValue;
+  if ( errorAmbientSensor || isnan(ambientTemperature) || isnan(ambientHumidity) ) {
+    // sensor read error
+    ambientHumidity     = errorValue;     // set both to read error value
+    ambientTemperature  = errorValue;
+    ambientDewpoint     = errorValue;
   }
   else {
-    // Calc dew point if no error reading sensor
-    errorAmbientSensor = false;
+    // Calc dew point if no sensor read error: complex or simple calculation (use complex = better)
     if (dewPointComplexCalc) {
-      // this is the more complex calc
-      logEx = 0.66077 + 7.5*temperatureAmbient/(237.3+temperatureAmbient) + (log10(humidityAmbient) - 2);
-      dewPointAmbient = (logEx - 0.66077)*237.3/(0.66077+7.5-logEx);    
+      logEx = 0.66077 + 7.5*ambientTemperature/(237.3+ambientTemperature) + (log10(ambientHumidity) - 2);
+      ambientDewpoint = (logEx - 0.66077)*237.3/(0.66077+7.5-logEx);    
     }
     else {
-      // simple calc:
-      dewPointAmbient = temperatureAmbient - ((100 - humidityAmbient)/5.0);
+      ambientDewpoint = ambientTemperature - ((100 - ambientHumidity)/5.0);
     }
   }
 }
