@@ -3,31 +3,49 @@
 // also need BUTTON_ON for changing modes/parameters
 // -------------------------------------------------------------------------------
 #ifdef DISPLAY_ON
+// this is used if there is a display, even if there is no MODEBUTTON
 void menuL2ParamDisplay() {
   int theParam;
+  String theString;
 
-  displayText ("Display Params:",0,0,0);
-  addDisplayDelay(-1,2);
-  for (theParam = 0; theParam < numHeaterParams; theParam++) {
-    displayText(heaterParams[theParam],0,0,0);
+  displayText ("Settings:",0,0,0);
+  addDisplayDelay(-1,3);
+
+  // display the mode
+  displayText ("Mode:",0,0,0);
+  displayText (heaterModes[globalMode],0,1,0);
+  addDisplayDelay(-1,3);
+
+  // & now all their settings
+  for (theParam = 0; theParam < numHeaterParams;theParam++) {
+    theString = heaterParams[theParam];
+    theString.replace(" ","");
+    displayText(theString,0,0,0);     // auto-ambient max power
+    displayText (":",-1,-1,0);
     if (theParam == 0) {
       displayNumber(manualPower,0,1,0);
       displayText("%",-1,-1,0);
     }
     if (theParam == 1) {
-      displayNumber(aHtrTargetTemp,0,1,0);
-      displayText("C",-1,-1,0);
-    }
-    if (theParam == 2) {
-      displayNumber(tempCutOff,0,1,0);
-      displayText("C",-1,-1,0);
-    }
-    if (theParam == 3) {
       displayNumber(aAmbMaxPwr,0,1,0);
       displayText("%",-1,-1,0);
     }
+    if (theParam == 2) {
+      if (aAmbThresh > 0)  displayText("+",0,1,0);
+      if (aAmbThresh == 0) displayText("",0,1,0);
+      if (aAmbThresh < 0)  displayText("-",0,1,0);
+      displayNumber(abs(aAmbThresh),-1,-1,0);
+      displayText("C",-1,-1,0);
+    }
+    if (theParam == 3) {
+      if (aHtrTargetTemp > 0)  displayText("+",0,1,0);
+      if (aHtrTargetTemp == 0) displayText("",0,1,0);
+      if (aHtrTargetTemp < 0)  displayText("-",0,1,0);
+      displayNumber(abs(aHtrTargetTemp),-1,-1,0);
+      displayText("C",-1,-1,0);
+    }
     if (theParam == 4) {
-      displayNumber(aAmbThresh,0,1,0);
+      displayNumber(tempCutOff,0,1,0);
       displayText("C",-1,-1,0);
     }
     addDisplayDelay(-1,3);
@@ -43,7 +61,7 @@ void menuL1Main_Select() {
   // level1 menuID=0: select level2 menu item
   displayText("Main Menu",0,0,0);
   menuItemNum = selectMenuItem(0);    // ID = 0 for level1 main menu
-  addDisplayDelay(-1,2);
+  addDisplayDelay(-1,3);
 
   // go to level2 menus
   switch (menuItemNum) {
@@ -82,7 +100,7 @@ void menuL2ParamChange() {
   int paramCurrent;
 
   // select the param to change
-  displayText ("Change Param",0,0,0);
+  displayText ("Change Param:",0,0,0);
   menuItemNum = selectMenuItem(2);    // ID = 2 for level2 change param
   addDisplayDelay(-1,2);
 
@@ -121,6 +139,8 @@ void setParamValue(int theParam) {
   int valMax;
   int valIncr;
   int theVal;
+  String theUnit;
+  String theString;
 
   // set the current value, max & min
   switch (theParam) {
@@ -129,56 +149,82 @@ void setParamValue(int theParam) {
       valMin = manualPowerRange[0];
       valMax = manualPowerRange[1];
       valIncr = manualPowerRange[3];
+      theUnit = "%";
       break;
     case 1:
-      valCurrent = aHtrTargetTemp;
-      valMin = aHtrTargetTempRange[0];
-      valMax = aHtrTargetTempRange[1];
-      valIncr = aHtrTargetTempRange[3];
-      break;
-    case 2:
-      valCurrent = tempCutOff;
-      valMin = tempCutOffRange[0];
-      valMax = tempCutOffRange[1];
-      valIncr = tempCutOffRange[3];
-      break;
-    case 3:
       valCurrent = aAmbMaxPwr;
       valMin = aAmbMaxPwrRange[0];
       valMax = aAmbMaxPwrRange[1];
       valIncr = aAmbMaxPwrRange[3];
+      theUnit = "%";
       break;
-    case 4:
+    case 2:
       valCurrent = aAmbThresh;
       valMin = aAmbThreshRange[0];
       valMax = aAmbThreshRange[1];
       valIncr = aAmbThreshRange[3];
+      theUnit = "C";
+      break;
+    case 3:
+      valCurrent = aHtrTargetTemp;
+      valMin = aHtrTargetTempRange[0];
+      valMax = aHtrTargetTempRange[1];
+      valIncr = aHtrTargetTempRange[3];
+      theUnit = "C";
+      break;
+    case 4:
+      valCurrent = tempCutOff;
+      valMin = tempCutOffRange[0];
+      valMax = tempCutOffRange[1];
+      valIncr = tempCutOffRange[3];
+      theUnit = "C";
       break;
   }
 
-  // display starting value (current value)
-  displayText (heaterParams[theParam],0,0,0);
-  theVal = valCurrent;
-  displayNumber(theVal,0,1,0);
-  addDisplayDelay(-1,2);
+  // display starting stuff
+  theString = heaterParams[theParam];   // the parameter
+  theString.replace(" ","");
+  theString += ":";
+  displayText(theString,0,0,0);
+  displayText ("(",6,1,0);              // the current value in "()" with units
+  displayNumber(valCurrent,-1,-1,0);
+  displayText (theUnit,-1,-1,0);
+  displayText (")",-1,-1,0);
 
-  // cycle through values min to max
+  // cycle through values min to max repeatedly
+  theVal = valMin;
   do {
-    displayText("                ",0,1,0);                        // clear - something weird happens on rotation through range
-    if (theVal > valMax) theVal = valMin;                        // reset item number
-    displayNumber(theVal,0,1,0);                                  // display the incrementing value
-    theVal += valIncr;                                            // incr item number
+    displayText("      ",0,1,0);                               // clear - something weird happens on rotation through range
+    if (theVal < valMin) theVal = valMin;                       // reset item number
+    if (theVal > valMax) theVal = valMin;                       // reset item number
+    displayNumber(theVal,0,1,0);                                // display the incrementing value
+    theVal += valIncr;                                          // incr item number
     addDisplayDelay(-1,2);
-  } while (checkButtonPress() == false);                          // done when select button pressed (LOW = pressed)
-  displayText ("selected",8,1,0);
+  } while (checkButtonPress() == false);                        // done when select button pressed (LOW = pressed)
+  
+  // finished cycle. Set to preceeding incr value - goes in cycle (min to max)
+  if (theVal == valMin) theVal = valMax;
+  else theVal -=valIncr;
+  displayNumber(theVal,0,1,0);                                // display the incrementing value
+  displayText(theUnit,-1,-1,0);
+  displayText("selected",6,1,0);
+  addDisplayDelay(-1,3);
 
   // set the new param value & save to EEPROM. Maybe just do this if param changed
-  if (theParam == 0) manualPower    = theVal - valIncr;
-  if (theParam == 1) aHtrTargetTemp = theVal - valIncr;
-  if (theParam == 2) tempCutOff     = theVal - valIncr;
-  if (theParam == 3) aAmbMaxPwr     = theVal - valIncr;
-  if (theParam == 4) aAmbThresh     = theVal - valIncr;
-  saveEEPROMparams();
+  if (theVal != valCurrent) {
+    // parameter changed
+    if (theParam == 0) manualPower    = theVal;
+    if (theParam == 1) aAmbMaxPwr     = theVal;
+    if (theParam == 2) aAmbThresh     = theVal;
+    if (theParam == 3) aHtrTargetTemp = theVal;
+    if (theParam == 4) tempCutOff     = theVal;
+    saveEEPROMparams();
+    displayText ("saved    ",6,1,0);
+  }
+  else {
+    // parameter unchanged
+    displayText ("no change",6,1,0);
+  }
   addDisplayDelay(-1,2);
 }
 

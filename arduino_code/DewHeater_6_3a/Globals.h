@@ -19,13 +19,13 @@ const int   numChannels = 2;
 //  - MODEBUTTON: LOCAL with button 
 //    - MUST define a DISPLAY TYPE line 28
 // options: PC_CONTROL, MODEBUTTON
-#define PC_CONTROL
+#define MODEBUTTON
                                         
 
 // OPTIONAL. DISPLAYS: OLED (OLED1306=SSD1306 display; using ssd1306ascii driver), LCD (LCD1602=16*2 LCD1604=16*4 LCD2004=20*4).
 // options: OLED1306, LCD1602, DISPLAY_OFF (most common). LCD1604, LCD2004, OR DISPLAY_OFF are other options
 // - see comments lines 16-21
-#define DISPLAY_OFF
+#define LCD1602
 
 // some more params than can be altered
 const bool  blankHeaterDuringRead = true;       // options: true, false: blank heater during heater temperature read
@@ -215,10 +215,10 @@ const int numHeaterModes = 4;
 // heaterParams - is also for level2 param menu: ID = 2
 const char *heaterParams [] = {
   "Man-Pwr     ", 
-  "A-Htr-Thresh", 
-  "TempCutOff  ", 
   "A-Amb-MaxPwr", 
-  "A-Amb-Thresh"
+  "A-Amb-Thresh",
+  "A-Htr-Target", 
+  "TempCutOff  ", 
 };
 const int numHeaterParams = 5;
 

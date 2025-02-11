@@ -54,12 +54,8 @@ void displayChannelData(int currChan) {
       displayNumber(abs(aboveDewPoint),-1,-1,0);
       displayText("C",-1,-1,0);
       break;
-    case 3:     // auto-heater mode: display heater temp - dew point
-      aboveDewPoint = int(tempHeater[currChan] - ambientDewpoint);
-      if (aboveDewPoint > 0)  displayText("+",2,currChan,0);
-      if (aboveDewPoint == 0) displayText("",2,currChan,0);
-      if (aboveDewPoint < 0)  displayText("-",2,currChan,0);
-      displayNumber(abs(aboveDewPoint),-1,-1,0);
+    case 3:     // auto-heater mode: display heater temp
+      displayNumber(tempHeater[currChan],2,currChan,0);
       displayText("C",-1,-1,0);
       break;
   }
@@ -68,12 +64,13 @@ void displayChannelData(int currChan) {
   displayNumber(outputPower[currChan],6,currChan,0);
   displayText("%",-1,-1,0);
 
-  // display the heater mode - reverse the colour if has defaulted from auto to manual or OFF (i.e. != globalMode)
+  // display the heater mode 
+  // If an OLED display reverse the colour if has defaulted from auto-htr to auto-amb, manual or OFF (i.e. != globalMode)
   if (globalMode == chanCycleMode[currChan]) {
     displayText(heaterModes[chanCycleMode[currChan]],11,currChan,0);
   }
   else {
-    displayText(heaterModes[chanCycleMode[currChan]],11,currChan,1);      // reverse if OLED
+    displayText(heaterModes[chanCycleMode[currChan]],11,currChan,1);
   }
   // delay to hold current view: if line1 (2nd) for 2-row display; line3 (4th) for all displays
   addDisplayDelay(currChan, 2);

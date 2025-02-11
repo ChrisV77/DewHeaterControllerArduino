@@ -53,37 +53,49 @@ void saveEEPROMparams() {
   EEPROM.put( eepromAddress , tempCutOff );           // heater temp at which heater powers cuts off - to prevent over heating
 }
 
-bool checkInRange(int val, int minval, int maxval) {
-  return ((val >= minval) && (val <= maxval));
+bool checkParamError(int theVal, int minVal, int maxVal, int incrVal) {
+  int validVal;
+  bool errorVal;
+
+  errorVal = true;
+//  return ((val >= minval) && (val <= maxval));
+  // check parameters in valid = in the range of allowed values & follows the increment, e.g. manualPower = 0 - 100% in increments of 10%
+  for (validVal = minVal; validVal <= maxVal; validVal+=incrVal) {
+    if (theVal == validVal) errorVal = false;
+  }
+
+  return errorVal;       // return true if error, false if no error
+//  return ((val >= minval) && (val <= maxval));
 }
 
 bool checkErrorEEPROMdata() {
-  bool errorEEPROMdata = false;
+  bool errorParam = false;
 
-  // check EEPROM value within allowed/reasonable range
-  if (!checkInRange( globalMode, globalModeRange[0], globalModeRange[1])) {     
+  // check EEPROM value within allowed range & at their increment. If not set to default
+  // values from arrays: 0=min 1=max 2=default 3=incr
+  if (checkParamError( globalMode, globalModeRange[0], globalModeRange[1], globalModeRange[3]) ) {     
     globalMode = globalModeRange[2];
-    errorEEPROMdata = true;
+    errorParam = true;
   }
-  if (!checkInRange( manualPower, manualPowerRange[0], manualPowerRange[1])) {
+  if (checkParamError( manualPower, manualPowerRange[0], manualPowerRange[1], manualPowerRange[3]) ) {
     manualPower = manualPowerRange[2];
-    errorEEPROMdata = true;
+    errorParam = true;
   }
-  if (!checkInRange( aAmbMaxPwr, aAmbMaxPwrRange[0], aAmbMaxPwrRange[1])) {     
+  if (checkParamError( aAmbMaxPwr, aAmbMaxPwrRange[0], aAmbMaxPwrRange[1], aAmbMaxPwrRange[3]) ) {     
     aAmbMaxPwr = aAmbMaxPwrRange[2];
-    errorEEPROMdata = true;
+    errorParam = true;
   }
-  if (!checkInRange( aAmbThresh, aAmbThreshRange[0], aAmbThreshRange[1])) {     
+  if (checkParamError( aAmbThresh, aAmbThreshRange[0], aAmbThreshRange[1], aAmbThreshRange[3]) ) {     
     aAmbThresh = aAmbThreshRange[2];
-    errorEEPROMdata = true;
+    errorParam = true;
   }
-  if (!checkInRange( aHtrTargetTemp, aHtrTargetTempRange[0], aHtrTargetTempRange[1])) {
+  if (checkParamError( aHtrTargetTemp, aHtrTargetTempRange[0], aHtrTargetTempRange[1], aHtrTargetTempRange[3]) ) {
     aHtrTargetTemp = aHtrTargetTempRange[2];
-    errorEEPROMdata = true;
+    errorParam = true;
   }
-  if (!checkInRange( tempCutOff, tempCutOffRange[0], tempCutOffRange[1])) {     
+  if (checkParamError( tempCutOff, tempCutOffRange[0], tempCutOffRange[1], tempCutOffRange[3]) ) {     
     tempCutOff = tempCutOffRange[2];
-    errorEEPROMdata = true;
+    errorParam = true;
   }
-  return errorEEPROMdata;
+  return errorParam;
 }
