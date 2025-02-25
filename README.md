@@ -29,4 +29,7 @@ The included files are:
 - *Arduino code*: this folder contains the files to install on the Arduino
 - *windowsapp*: this contains the windows app if running and display on a PC.
 - *instructions_v6.pdf*: contains the rationale for the device, build options, assembly isntructions, and software installation & use.
+- *Arduino_test_apps*: this folder contains Arduino programs for testing the sensors, displays, heater, and for setting up the PID control for auto-heater mode (if you wish to do this).
+- *windows_test_apps*: this contains the windows apps for using the PIC control setup procedures.
+
 
